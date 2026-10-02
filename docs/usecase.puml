@@ -1,0 +1,44 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundcorner 8
+
+actor "Імпортер\n(Importer)" as Importer
+actor "Митний брокер\n(CustomsBroker)" as CustomsBroker
+actor "Митний інспектор\n(CustomsInspector)" as CustomsInspector
+
+rectangle "Система автоматизації діяльності митного брокера (CustomsBroker)" {
+    usecase "Подати пакет документів на оформлення" as UC_SubmitDocs
+    usecase "Перевірити пакет товаросупровідних документів" as UC_VerifyDocs
+    usecase "Скласти митну декларацію" as UC_DraftDeclaration
+    usecase "Класифікувати товар за УКТЗЕД" as UC_ClassifyItem
+    usecase "Розрахувати суму митних платежів" as UC_CalculateDuties
+    usecase "Застосувати пільгову ставку / преференцію" as UC_ApplyPreference
+    usecase "Призначити та провести форму митного контролю" as UC_AssignInspection
+    usecase "Сплатити мито та збори" as UC_PayDuties
+    usecase "Прийняти рішення про випуск вантажу" as UC_ReleaseCargo
+    usecase "Надати відмову у митному оформленні" as UC_RejectCargo
+
+    ' Включення (<<include>>)
+    (UC_DraftDeclaration) ..> (UC_ClassifyItem) : <<include>>
+    (UC_DraftDeclaration) ..> (UC_CalculateDuties) : <<include>>
+
+    ' Розширення (<<extend>>)
+    (UC_ApplyPreference) ..> (UC_CalculateDuties) : <<extend>>
+    (UC_RejectCargo) ..> (UC_AssignInspection) : <<extend>>
+}
+
+' Асоціації акторів із прецедентами
+Importer --> UC_SubmitDocs
+Importer --> UC_PayDuties
+
+CustomsBroker --> UC_VerifyDocs
+CustomsBroker --> UC_DraftDeclaration
+CustomsBroker --> UC_PayDuties
+
+CustomsInspector --> UC_AssignInspection
+CustomsInspector --> UC_ReleaseCargo
+CustomsInspector --> UC_RejectCargo
+
+@enduml

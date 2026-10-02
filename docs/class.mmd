@@ -1,0 +1,141 @@
+classDiagram
+    %% Інтерфейс обробника товаросупровідних документів
+    class IDocumentPackageHandler {
+        <<interface>>
+        +processDocumentPackage(DocumentPackage pkg) boolean
+    }
+
+    %% Базовий абстрактний клас учасника митних правовідносин
+    class CustomsParticipant {
+        <<abstract>>
+        #String id
+        #String name
+        #String contactEmail
+        +CustomsParticipant(String id, String name, String contactEmail)
+        +getParticipantInfo() String$
+        +processDocumentPackage(DocumentPackage pkg)* boolean
+        +getId() String
+        +getName() String
+        +getContactEmail() String
+    }
+
+    %% Суб'єкт ЗЕД - Імпортер
+    class Importer {
+        -String taxId
+        -String companyAddress
+        +Importer(String id, String name, String contactEmail, String taxId, String companyAddress)
+        +processDocumentPackage(DocumentPackage pkg) boolean
+        +submitDocuments(CustomsBroker broker, DocumentPackage pkg) void
+        +getTaxId() String
+        +getCompanyAddress() String
+    }
+
+    %% Митний брокер (декларант)
+    class CustomsBroker {
+        -String licenseNumber
+        -double brokerageFeeRate
+        +CustomsBroker(String id, String name, String contactEmail, String licenseNumber, double brokerageFeeRate)
+        +processDocumentPackage(DocumentPackage pkg) boolean
+        +createDeclaration(Importer importer, DocumentPackage pkg) CustomsDeclaration
+        +classifyItem(CommodityCodeRegistry registry, DeclarationItem item) boolean
+        +submitDeclaration(CustomsInspector inspector, CustomsDeclaration declaration) void
+        +getLicenseNumber() String
+        +getBrokerageFeeRate() double
+    }
+
+    %% Посадова особа митного органу - інспектор
+    class CustomsInspector {
+        -String badgeNumber
+        -String customsPostCode
+        +CustomsInspector(String id, String name, String contactEmail, String badgeNumber, String customsPostCode)
+        +processDocumentPackage(DocumentPackage pkg) boolean
+        +assignInspection(CustomsDeclaration declaration) String
+        +verifyDocuments(CustomsDeclaration declaration) boolean
+        +releaseCargo(CustomsDeclaration declaration) boolean
+        +getBadgeNumber() String
+        +getCustomsPostCode() String
+    }
+
+    %% Електронна митна декларація
+    class CustomsDeclaration {
+        -String declarationNumber
+        -String importerId
+        -String brokerId
+        -String status
+        -List~DeclarationItem~ items
+        -double totalCustomsValue
+        -double totalCalculatedDuty
+        -boolean dutyPaid
+        +CustomsDeclaration(String declarationNumber, String importerId, String brokerId)
+        +addItem(DeclarationItem item) void
+        +getItems() List~DeclarationItem~
+        +calculateDuties(double rate) double
+        +calculateDuties(double rate, double preferentialDiscount) double
+        +validateCommodityCodes(CommodityCodeRegistry registry) boolean
+        +markDutiesPaid() void
+        +updateStatus(String newStatus) void
+        +getStatus() String
+        +getTotalCustomsValue() double
+        +getTotalCalculatedDuty() double
+        +isDutyPaid() boolean
+    }
+
+    %% Товарна позиція митної декларації
+    class DeclarationItem {
+        -int itemNumber
+        -String description
+        -String commodityCode
+        -double invoiceValue
+        -double netWeightKg
+        -String originCountry
+        +DeclarationItem(int itemNumber, String description, String commodityCode, double invoiceValue, double netWeightKg, String originCountry)
+        +getItemDetails() String
+        +getItemNumber() int
+        +getDescription() String
+        +getCommodityCode() String
+        +getInvoiceValue() double
+        +getNetWeightKg() double
+        +getOriginCountry() String
+    }
+
+    %% Довідник кодів УКТЗЕД та тарифних ставок
+    class CommodityCodeRegistry {
+        -Map~String, Double~ tariffRates
+        -Map~String, List~String~~ requiredPermits
+        +CommodityCodeRegistry()
+        +getTariffRate(String code) double
+        +validateCodeFormat(String code) boolean
+        +getRequiredPermits(String code) List~String~
+    }
+
+    %% Допоміжний пакет товаросупровідних документів
+    class DocumentPackage {
+        -String packageId
+        -String invoiceNumber
+        -String contractNumber
+        -boolean hasPackingList
+        -boolean hasCertificateOfOrigin
+        +DocumentPackage(String packageId, String invoiceNumber, String contractNumber)
+        +isValidPackage() boolean
+        +getPackageId() String
+        +getInvoiceNumber() String
+        +getContractNumber() String
+    }
+
+    %% Обов'язкові типи зв'язків (FR-010)
+    %% 1. Реалізація інтерфейсу (<|..)
+    IDocumentPackageHandler <|.. CustomsParticipant : Realization
+
+    %% 2. Наслідування (<|--)
+    CustomsParticipant <|-- Importer : Inheritance
+    CustomsParticipant <|-- CustomsBroker : Inheritance
+    CustomsParticipant <|-- CustomsInspector : Inheritance
+
+    %% 3. Строга композиція (*--)
+    CustomsDeclaration *-- DeclarationItem : Composition
+
+    %% 4. Залежність (..>)
+    CustomsDeclaration ..> CommodityCodeRegistry : Dependency
+    CustomsBroker ..> DocumentPackage : Dependency
+    Importer ..> DocumentPackage : Dependency
+    CustomsParticipant ..> DocumentPackage : Dependency

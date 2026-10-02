@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    actor Imp as Імпортер (Importer)
+    participant Brk as Митний брокер (CustomsBroker)
+    participant Dec as Митна декларація (CustomsDeclaration)
+    participant Reg as Реєстр УКТЗЕД (CommodityCodeRegistry)
+    participant Insp as Митний інспектор (CustomsInspector)
+
+    Imp ->>+ Brk: submitDocuments(broker, pkg)
+    Note over Brk: Експертиза комплектності товаросупровідних документів
+    Brk ->> Brk: processDocumentPackage(pkg)
+
+    alt Пакет документів валідний
+        Brk ->>+ Dec: createDeclaration(importer, pkg)
+        Dec -->>- Brk: declaration instance
+
+        Brk ->>+ Reg: validateCodeFormat(commodityCode)
+        Reg -->>- Brk: return isValid (boolean)
+
+        Brk ->>+ Reg: getTariffRate(commodityCode)
+        Reg -->>- Brk: return tariffRate (double)
+
+        alt Наявний сертифікат походження (преференція)
+            Brk ->>+ Dec: calculateDuties(rate, discount)
+            Dec -->>- Brk: return totalDuty (double)
+        else Базове нарахування без пільг
+            Brk ->>+ Dec: calculateDuties(rate)
+            Dec -->>- Brk: return totalDuty (double)
+        end
+
+        Brk ->>+ Insp: submitDeclaration(inspector, declaration)
+        Insp ->> Insp: verifyDocuments(declaration)
+        Insp ->> Insp: assignInspection(declaration)
+        Insp -->> Brk: notifyInspectionDecision(formOfControl)
+
+        alt Митний контроль пройдено успішно
+            Brk ->> Dec: markDutiesPaid()
+            Insp ->> Dec: updateStatus("CargoReleased")
+            Insp ->> Insp: releaseCargo(declaration)
+            Insp -->> Brk: notifyCargoReleased(declarationNumber)
+            Brk -->> Imp: notifyReleaseComplete(status)
+        else Виявлено порушення / невідповідність
+            Insp ->> Dec: updateStatus("Rejected")
+            Insp -->> Brk: notifyRejection(reasons)
+            Brk -->> Imp: notifyRejection(reasons)
+        end
+        deactivate Insp
+
+    else Пакет документів некомплектний
+        Brk -->> Imp: notifyRejection("Пакет некомплектний")
+    end
+    deactivate Brk

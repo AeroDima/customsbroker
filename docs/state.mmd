@@ -1,0 +1,19 @@
+stateDiagram-v2
+    [*] --> DocumentsReceived : Подання пакета товаросупровідних документів (submitDocuments)
+
+    DocumentsReceived --> DeclarationDrafting : Пакет прийнято в обробку (processDocumentPackage = true)
+    DocumentsReceived --> Rejected : Пакет некомплектний або фіктивний (processDocumentPackage = false)
+
+    DeclarationDrafting --> DeclarationVerified : Успішна класифікація товарів та перевірка кодів (validateCommodityCodes)
+    DeclarationDrafting --> Rejected : Код товару заблоковано або не знайдено
+
+    DeclarationVerified --> InspectionAssigned : Подання декларації на митний пост (submitDeclaration)
+
+    InspectionAssigned --> DutiesCalculatedAndPaid : Митний контроль пройдено успішно (verifyDocuments = true)
+    InspectionAssigned --> Rejected : Виявлено порушення митних правил / контрабанду
+
+    DutiesCalculatedAndPaid --> CargoReleased : Митні платежі надійшли у повному обсязі (markDutiesPaid)
+    DutiesCalculatedAndPaid --> Rejected : Несплата платежів у встановлений термін
+
+    CargoReleased --> [*] : Товар оформлено та передано вантажоодержувачу
+    Rejected --> [*] : Складено протокол про порушення / повернення товару
